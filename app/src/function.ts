@@ -68,7 +68,8 @@ export class PersonToAlbum {
         metadataSearchDto: {
           updatedAfter: store.get(this.getUpdateKeyName(link)),
           page: parseInt(nextPage, 10),
-          personIds: searchPersonIds
+          personIds: searchPersonIds,
+          withPeople: true
         }
       })
       
