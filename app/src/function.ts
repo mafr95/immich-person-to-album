@@ -61,57 +61,107 @@ export class PersonToAlbum {
       }
     }
 
-    while (nextPage !== null) {
-      console.log(` - Processing page ${nextPage}`)
-      
-      const res = await searchAssets({
-        metadataSearchDto: {
-          updatedAfter: store.get(this.getUpdateKeyName(link)),
-          page: parseInt(nextPage, 10),
-          personIds: searchPersonIds,
-          withPeople: true
-        }
-      })
-      
-      // Track the most recent photo timestamp
-      if (!mostRecent && res.assets.items.length > 0) {
-        mostRecent = res.assets.items[0].updatedAt
-      }
+    const updatedAfter = store.get(this.getUpdateKeyName(link))
+    let filteredAssets: any[] = []
 
-      // Filter assets based on operation type
-      let filteredAssets = res.assets.items
-
-      // AND operation: Only include assets that have ALL specified persons
-      if (operation === 'AND' && searchPersonIds.length > 1) {
-        filteredAssets = filteredAssets.filter(asset => {
-          const assetPersonIds = asset.people?.map(p => p.id) || []
-          return searchPersonIds.every(personId => assetPersonIds.includes(personId))
-        })
-      }
-      // OR operation: No filtering needed - API already returns assets with ANY of the persons
-
-      // NOT operation: Exclude assets that have any excluded persons
+    const applyPostFilters = (assets: any[]) => {
+      let result = assets
       if (link.excludePersonIds && link.excludePersonIds.length > 0) {
-        filteredAssets = filteredAssets.filter(asset => {
-          const assetPersonIds = asset.people?.map(p => p.id) || []
-          return !link.excludePersonIds!.some(personId => assetPersonIds.includes(personId))
+        result = result.filter(asset => {
+          const assetPersonIds = asset.people?.map((p: any) => p.id) || []
+          return !link.excludePersonIds!.some((personId: string) => assetPersonIds.includes(personId))
         })
       }
-
-      // EXCLUDE OTHERS: Only include assets that have EXACTLY the specified persons (no one else)
       if (link.excludeOthers) {
         const specifiedPersonIds = new Set(searchPersonIds)
-        
-        filteredAssets = filteredAssets.filter(asset => {
-          const assetPersonIds = asset.people?.map(p => p.id) || []
-          
-          // Check if asset has ONLY the specified persons
-          // Every person in the photo must be in our specified list
-          // And no extra people should be detected
-          return assetPersonIds.every(id => specifiedPersonIds.has(id))
+        result = result.filter(asset => {
+          const assetPersonIds = asset.people?.map((p: any) => p.id) || []
+          return assetPersonIds.every((id: string) => specifiedPersonIds.has(id))
         })
       }
+      return result
+    }
 
+    const updateMostRecent = (assets: any[]) => {
+      for (const asset of assets) {
+        if (!asset.updatedAt) continue
+        if (!mostRecent || new Date(asset.updatedAt).getTime() > new Date(mostRecent).getTime()) {
+          mostRecent = asset.updatedAt
+        }
+      }
+    }
+
+    if (operation === 'OR' && searchPersonIds.length > 1) {
+      const uniqAssets = new Map<string, any>()
+      for (const personId of searchPersonIds) {
+        let page: string | null = '1'
+
+        while (page !== null) {
+          console.log(` - Processing page ${page} for person ${personId}`)
+          const res = await searchAssets({
+            metadataSearchDto: {
+              updatedAfter,
+              page: parseInt(page, 10),
+              personIds: [personId],
+              withPeople: true
+            }
+          })
+
+          for (const asset of res.assets.items) {
+            uniqAssets.set(asset.id, asset)
+          }
+
+          updateMostRecent(res.assets.items)
+          page = res.assets.nextPage
+        }
+      }
+
+      filteredAssets = applyPostFilters(Array.from(uniqAssets.values()))
+    } else {
+      while (nextPage !== null) {
+        console.log(` - Processing page ${nextPage}`)
+        
+        const res = await searchAssets({
+          metadataSearchDto: {
+            updatedAfter,
+            page: parseInt(nextPage, 10),
+            personIds: searchPersonIds,
+            withPeople: true
+          }
+        })
+        
+        if (!mostRecent && res.assets.items.length > 0) {
+          mostRecent = res.assets.items[0].updatedAt
+        }
+
+        filteredAssets = res.assets.items
+
+        if (operation === 'AND' && searchPersonIds.length > 1) {
+          filteredAssets = filteredAssets.filter(asset => {
+            const assetPersonIds = asset.people?.map(p => p.id) || []
+            return searchPersonIds.every(personId => assetPersonIds.includes(personId))
+          })
+        }
+
+        filteredAssets = applyPostFilters(filteredAssets)
+
+        if (filteredAssets.length > 0) {
+          await addAssetsToAlbum({
+            id: link.albumId,
+            bulkIdsDto: {
+              ids: filteredAssets.map(x => x.id)
+            }
+          })
+          console.log(`   Added ${filteredAssets.length} assets`)
+        } else {
+          console.log(`   No assets matched criteria`)
+        }
+
+        nextPage = res.assets.nextPage
+      }
+    }
+
+    if (operation === 'OR' && searchPersonIds.length > 1) {
       if (filteredAssets.length > 0) {
         await addAssetsToAlbum({
           id: link.albumId,
@@ -123,8 +173,6 @@ export class PersonToAlbum {
       } else {
         console.log(`   No assets matched criteria`)
       }
-
-      nextPage = res.assets.nextPage
     }
 
     // Store the most recent asset update value
