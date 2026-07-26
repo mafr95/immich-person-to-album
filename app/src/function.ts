@@ -11,6 +11,37 @@ export class PersonToAlbum {
   }
 
   /**
+   * Format API errors with full details for debugging
+   */
+  private formatApiError (error: any): string {
+    if (!error) return 'Unknown error'
+    
+    if (error.data?.errors) {
+      const errors = Array.isArray(error.data.errors) ? error.data.errors : [error.data.errors]
+      const details = errors.map((err: any) => {
+        if (typeof err === 'string') return err
+        if (err.messages) return `[${err.property}] ${err.messages.join(', ')}`
+        return JSON.stringify(err)
+      }).join(' | ')
+      return `API Error (${error.status}): ${error.data.message} - ${details}`
+    }
+    
+    if (error.data?.message) {
+      return `API Error (${error.status}): ${error.data.message}`
+    }
+    
+    return `API Error (${error.status}): ${JSON.stringify(error.data || error.message || error)}`
+  }
+
+  /**
+   * Check if a string is a valid UUID
+   */
+  private isValidUUID (value: string): boolean {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    return uuidRegex.test(value)
+  }
+
+  /**
    * Read the config.json file or parse the CONFIG env value to get the configuration
    */
   initConfig () {
@@ -38,6 +69,16 @@ export class PersonToAlbum {
     const searchPersonIds = link.personIds && link.personIds.length > 0 
       ? link.personIds 
       : [link.personId!]
+    
+    // Validate IDs
+    const invalidPersonIds = searchPersonIds.filter(id => !this.isValidUUID(id))
+    if (invalidPersonIds.length > 0) {
+      throw new Error(`Invalid person ID(s): ${invalidPersonIds.join(', ')}. Expected UUID format.`)
+    }
+    
+    if (!this.isValidUUID(link.albumId)) {
+      throw new Error(`Invalid album ID: ${link.albumId}. Expected UUID format.`)
+    }
     
     // Determine operation type (defaults to OR for backward compatibility)
     const operation = link.operation || 'OR'

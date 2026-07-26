@@ -4,6 +4,29 @@ import cron from 'node-cron'
 
 const pta = new PersonToAlbum()
 
+/**
+ * Format API errors with full details for debugging
+ */
+function formatApiError (error: any): string {
+  if (!error) return 'Unknown error'
+  
+  if (error.data?.errors) {
+    const errors = Array.isArray(error.data.errors) ? error.data.errors : [error.data.errors]
+    const details = errors.map((err: any) => {
+      if (typeof err === 'string') return err
+      if (err.messages) return `[${err.property}] ${err.messages.join(', ')}`
+      return JSON.stringify(err)
+    }).join(' | ')
+    return `API Error (${error.status}): ${error.data.message} - ${details}`
+  }
+  
+  if (error.data?.message) {
+    return `API Error (${error.status}): ${error.data.message}`
+  }
+  
+  return `API Error (${error.status}): ${JSON.stringify(error.data || error.message || error)}`
+}
+
 async function main () {
   console.log(new Date().toISOString())
 
@@ -35,7 +58,8 @@ async function main () {
       try {
         await pta.processPerson(link)
       } catch (e) {
-        console.log(e)
+        console.error(`Error processing album "${link.description || link.albumId}":`)
+        console.error(formatApiError(e))
       }
     }
   }
