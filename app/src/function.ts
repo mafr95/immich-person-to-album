@@ -30,7 +30,7 @@ export class PersonToAlbum {
 
   async processPerson (link: Link) {
     let nextPage: string | null = '1'
-    let mostRecent
+    let mostRecent: string | undefined
 
     if (link.description) console.log(`=== ${link.description} ===`)
     
@@ -68,14 +68,14 @@ export class PersonToAlbum {
       let result = assets
       if (link.excludePersonIds && link.excludePersonIds.length > 0) {
         result = result.filter(asset => {
-          const assetPersonIds = asset.people?.map((p: any) => p.id) || []
+          const assetPersonIds = asset.people?.map((p: { id: string }) => p.id) || []
           return !link.excludePersonIds!.some((personId: string) => assetPersonIds.includes(personId))
         })
       }
       if (link.excludeOthers) {
         const specifiedPersonIds = new Set(searchPersonIds)
         result = result.filter(asset => {
-          const assetPersonIds = asset.people?.map((p: any) => p.id) || []
+          const assetPersonIds = asset.people?.map((p: { id: string }) => p.id) || []
           return assetPersonIds.every((id: string) => specifiedPersonIds.has(id))
         })
       }
@@ -138,7 +138,7 @@ export class PersonToAlbum {
 
         if (operation === 'AND' && searchPersonIds.length > 1) {
           filteredAssets = filteredAssets.filter(asset => {
-            const assetPersonIds = asset.people?.map(p => p.id) || []
+            const assetPersonIds = asset.people?.map((p: { id: string }) => p.id) || []
             return searchPersonIds.every(personId => assetPersonIds.includes(personId))
           })
         }
