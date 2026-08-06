@@ -2,6 +2,11 @@
 
 Automatically sync Immich photos to albums based on detected people with advanced AND/OR/NOT filtering operations.
 
+Every run does a full sync: photos that newly match a link's criteria are added, and photos already
+in the album that no longer match (e.g. a wrongly-assigned face was removed, or a person was merged/deleted)
+are automatically removed again. Because the sync is exact, an album should only be targeted by one
+`personLinks` rule, and photos manually added to that album will also be removed if they don't match the criteria.
+
 **Docker Hub**: You're looking at it!  
 **Source Code**: [GitHub - laikenny/immich-person-to-album](https://github.com/laikenny/immich-person-to-album)  
 **Original Project**: [alangrainger/immich-person-to-album](https://github.com/alangrainger/immich-person-to-album)
@@ -71,7 +76,7 @@ docker logs -f immich-person-to-album
 1. Open Immich → Click profile picture
 2. **Account Settings** → **API Keys**
 3. Click **New API Key**
-4. Permissions: `asset.read` and `albumAsset.create`
+4. Permissions: `asset.read`, `album.read`, `albumAsset.create` and `albumAsset.delete`
 5. Copy the key to your `config.json`
 
 ### Get Person IDs
@@ -195,21 +200,12 @@ docker exec immich-person-to-album sh -c "wget -qO- http://immich-server:2283/ap
 
 **Fix:** Make sure both containers are on the same Docker network.
 
-### Photos not being added
+### Photos not being added or removed
 
 1. Check logs: `docker logs immich-person-to-album`
 2. Verify person IDs are correct
 3. Verify album IDs are correct
-4. Check API key has correct permissions
-5. View `/data/store.json` - tracks last processed timestamp
-
-### Reset processing (re-scan all photos)
-
-```bash
-# Delete store.json to reprocess everything
-rm /path/to/data/store.json
-docker restart immich-person-to-album
-```
+4. Check API key has `asset.read`, `album.read`, `albumAsset.create` and `albumAsset.delete` permissions
 
 ---
 

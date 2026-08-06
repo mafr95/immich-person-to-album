@@ -17,5 +17,4 @@ export interface Link {
   excludePersonIds?: string[];  // NOT operation
   excludeOthers?: boolean;  // New: Exclude all other people not in personIds
   albumId: string;
-  apiKeyShort: string;
 }

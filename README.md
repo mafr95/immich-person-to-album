@@ -6,6 +6,11 @@ with another user (for example, a shared album of your children).
 You can arbitrarily add any face/person to any album. So you could make a "Family" album which contains all your family 
 members and is automatically updated.
 
+Every run does a full sync of each `personLinks` rule: photos that newly match are added to the album, and photos in the
+album that no longer match (for example because a wrongly-tagged face was deleted, or a person was merged/deleted) are
+automatically removed again. Because the sync is exact, an album should only be targeted by a single rule — photos added
+to it manually, or by another rule, will also be removed if they don't match the criteria.
+
 You can use API keys from any number of Immich users, so the one Docker container can handle doing automatic
 albums for all your users.
 
@@ -63,7 +68,7 @@ Alternatively, you can add the configuration inline in your `docker-compose.yml`
 4. Go to API Keys
 5. Click **New API Key**
 6. Give it a name
-7. Add the permissions of `asset.read` and `albumAsset.create`
+7. Add the permissions of `asset.read`, `album.read`, `albumAsset.create` and `albumAsset.delete`
 8. Click **Create**
 9. Copy the new API key and put it in your config file 
 
