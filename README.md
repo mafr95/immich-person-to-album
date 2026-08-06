@@ -68,7 +68,7 @@ Alternatively, you can add the configuration inline in your `docker-compose.yml`
 4. Go to API Keys
 5. Click **New API Key**
 6. Give it a name
-7. Add the permissions of `asset.read`, `album.read`, `albumAsset.create` and `albumAsset.delete`
+7. Add the permissions of `asset.read`, `albumAsset.create` and `albumAsset.delete`
 8. Click **Create**
 9. Copy the new API key and put it in your config file 
 

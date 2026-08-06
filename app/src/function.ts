@@ -1,5 +1,5 @@
 import { Link, Config } from './types'
-import { addAssetsToAlbum, getAlbumInfo, removeAssetFromAlbum, searchAssets, AssetResponseDto } from '@immich/sdk'
+import { addAssetsToAlbum, removeAssetFromAlbum, searchAssets, AssetResponseDto } from '@immich/sdk'
 import path from 'path'
 
 export class PersonToAlbum {
@@ -134,6 +134,27 @@ export class PersonToAlbum {
     return matched
   }
 
+  /**
+   * Walk every page of the album's current contents and return the set of asset IDs it holds.
+   */
+  private async getAlbumAssetIds (albumId: string): Promise<Set<string>> {
+    const assetIds = new Set<string>()
+    let page: string | null = '1'
+    while (page !== null) {
+      const res = await searchAssets({
+        metadataSearchDto: {
+          page: parseInt(page, 10),
+          albumIds: [albumId]
+        }
+      })
+      for (const asset of res.assets.items) {
+        assetIds.add(asset.id)
+      }
+      page = res.assets.nextPage
+    }
+    return assetIds
+  }
+
   async processPerson (link: Link) {
     if (link.description) console.log(`=== ${link.description} ===`)
 
@@ -178,8 +199,7 @@ export class PersonToAlbum {
     const matchedAssets = await this.getMatchingAssets(searchPersonIds, operation, link)
 
     // The album's current contents
-    const album = await getAlbumInfo({ id: link.albumId })
-    const currentAssetIds = new Set(album.assets.map(asset => asset.id))
+    const currentAssetIds = await this.getAlbumAssetIds(link.albumId)
 
     const toAdd = [...matchedAssets.keys()].filter(id => !currentAssetIds.has(id))
     const toRemove = [...currentAssetIds].filter(id => !matchedAssets.has(id))

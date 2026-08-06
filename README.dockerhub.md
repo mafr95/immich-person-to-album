@@ -76,7 +76,7 @@ docker logs -f immich-person-to-album
 1. Open Immich → Click profile picture
 2. **Account Settings** → **API Keys**
 3. Click **New API Key**
-4. Permissions: `asset.read`, `album.read`, `albumAsset.create` and `albumAsset.delete`
+4. Permissions: `asset.read`, `albumAsset.create` and `albumAsset.delete`
 5. Copy the key to your `config.json`
 
 ### Get Person IDs
